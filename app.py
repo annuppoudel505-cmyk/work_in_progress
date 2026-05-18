@@ -104,7 +104,7 @@ def open_signup():
     signup_confirm.pack(pady=5)
 
     tk.Button(signup_window, text="Create Account",
-              bg="green", fg="white", width=20,
+              bg="green", fg="black", width=20,
               command=signup).pack(pady=15)
 
 
@@ -141,7 +141,7 @@ def open_user_dashboard(username):
               command=lambda: request_admin(username)).pack(pady=10)
 
     tk.Button(dashboard, text="Logout",
-              bg="red", fg="white",
+              bg="red", fg="black",
               command=dashboard.destroy).pack(pady=10)
 
 
@@ -158,7 +158,7 @@ def open_admin_dashboard(username):
     tk.Label(dashboard, text="Role: Admin").pack()
 
     tk.Button(dashboard, text="Logout",
-              bg="red", fg="white",
+              bg="red", fg="black",
               command=dashboard.destroy).pack(pady=20)
 
 
@@ -226,14 +226,14 @@ def open_super_admin_dashboard(username):
     refresh_requests(tree)
 
     tk.Button(dashboard, text="Approve as Admin",
-              bg="green", fg="white",
+              bg="green", fg="black",
               command=lambda: approve_admin(tree)).pack(pady=5)
 
     tk.Button(dashboard, text="Refresh",
               command=lambda: refresh_requests(tree)).pack(pady=5)
 
     tk.Button(dashboard, text="Logout",
-              bg="red", fg="white",
+              bg="red", fg="black",
               command=dashboard.destroy).pack(pady=10)
 
 
@@ -257,11 +257,11 @@ password_entry = tk.Entry(root, show="*", width=30)
 password_entry.pack(pady=5)
 
 tk.Button(root, text="Login",
-          width=20, bg="blue", fg="white",
+          width=20, bg="blue", fg="black",
           command=login).pack(pady=10)
 
 tk.Button(root, text="Sign Up",
-          width=20, bg="green", fg="white",
+          width=20, bg="green", fg="black",
           command=open_signup).pack()
 
 root.bind("<Return>", lambda event: login())
