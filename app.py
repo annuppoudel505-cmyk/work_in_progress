@@ -1,165 +1,8 @@
-'''import tkinter as tk
-from tkinter import messagebox
-import sqlite3
-
-# Create database and table
-def create_database():
-    conn = sqlite3.connect("users.db")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE,
-        password TEXT
-    )
-    """)
-    
-    # Insert default user
-    cursor.execute("""
-    INSERT OR IGNORE INTO users (username, password)
-    VALUES (?, ?)
-    """, ("admin", "1234"))
-
-    conn.commit()
-    conn.close()
-
-# signup function (not implemented in the UI, but can be used for testing)
-def signup(username, password):
-    conn = sqlite3.connect("users.db")
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("""
-        INSERT INTO users (username, password)
-        VALUES (?, ?)
-        """, (username, password))
-        conn.commit()
-        messagebox.showinfo("Success", "User registered successfully!")
-    except sqlite3.IntegrityError:
-        messagebox.showerror("Error", "Username already exists.")
-    finally:
-        conn.close()
-        
-# Login function
-def login():
-    username = username_entry.get()
-    password = password_entry.get()
-
-    conn = sqlite3.connect("users.db")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    SELECT * FROM users
-    WHERE username = ? AND password = ?
-    """, (username, password))
-
-    user = cursor.fetchone()
-
-    conn.close()
-
-    if user:
-        messagebox.showinfo("Success", f"Welcome {username}!")
-        open_dashboard(username)
-    else:
-        messagebox.showerror("Error", "Invalid Username or Password")
-
-
-# Dashboard window
-def open_dashboard(username):
-    dashboard = tk.Toplevel(root)
-    dashboard.title("Dashboard")
-    dashboard.geometry("300x200")
-
-    label = tk.Label(
-        dashboard,
-        text=f"Welcome {username}",
-        font=("Arial", 16)
-    )
-    label.pack(pady=20)
-
-    logout_btn = tk.Button(
-        dashboard,
-        text="Logout",
-        command=dashboard.destroy
-    )
-    logout_btn.pack()
-
-
-# Create database
-create_database()
-
-
-# Main window
-root = tk.Tk()
-root.title("Login Portal")
-root.geometry("350x250")
-
-
-title = tk.Label(root, text="Login Portal", font=("Arial", 18))
-title.pack(pady=10)
-
-
-# Username
-username_label = tk.Label(root, text="Username")
-username_label.pack()
-
-username_entry = tk.Entry(root)
-username_entry.pack()
-
-
-# Password
-password_label = tk.Label(root, text="Password")
-password_label.pack()
-
-password_entry = tk.Entry(root, show="*")
-password_entry.pack()
-
-
-# Login Button
-login_button = tk.Button(
-    root,
-    text="Login",
-    command=login
-)
-login_button.pack(pady=15)
-
-
-root.mainloop()
-'''
 import tkinter as tk
 from tkinter import messagebox, ttk
 import sqlite3
-
-###database setup
-
-def create_database():
-    conn = sqlite3.connect("users.db")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE,
-        password TEXT,
-        role TEXT DEFAULT 'user',
-        admin_request INTEGER DEFAULT 0
-    )
-    """)
-
-    # Create default super admin
-    cursor.execute("""
-    INSERT OR IGNORE INTO users
-    (username, password, role, admin_request)
-    VALUES (?, ?, ?, ?)
-    """, ("superadmin", "admin123", "super_admin", 0))
-
-    conn.commit()
-    conn.close()
-
-
+import bcrypt
 # ================= SIGNUP =================
-
 def signup():
     username = signup_username.get()
     password = signup_password.get()
@@ -173,6 +16,8 @@ def signup():
         messagebox.showerror("Error", "Passwords do not match")
         return
 
+    hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
     conn = sqlite3.connect("users.db")
     cursor = conn.cursor()
 
@@ -180,21 +25,14 @@ def signup():
         cursor.execute("""
         INSERT INTO users (username, password, role)
         VALUES (?, ?, ?)
-        """, (username, password, "user"))
+        """, (username, hashed_pw, "user"))
 
         conn.commit()
-        messagebox.showinfo(
-            "Success",
-            "Account created successfully!"
-        )
-
+        messagebox.showinfo("Success", "Account created successfully!")
         signup_window.destroy()
 
     except sqlite3.IntegrityError:
-        messagebox.showerror(
-            "Error",
-            "Username already exists"
-        )
+        messagebox.showerror("Error", "Username already exists")
 
     conn.close()
 
@@ -209,39 +47,35 @@ def login():
     cursor = conn.cursor()
 
     cursor.execute("""
-    SELECT username, role
+    SELECT username, password, role
     FROM users
-    WHERE username=? AND password=?
-    """, (username, password))
+    WHERE username=?
+    """, (username,))
 
     user = cursor.fetchone()
     conn.close()
 
     if user:
-        username, role = user
+        db_username, db_password, role = user
 
-        messagebox.showinfo(
-            "Success",
-            f"Welcome {username}!"
-        )
+        if bcrypt.checkpw(password.encode('utf-8'), db_password):
 
-        if role == "super_admin":
-            open_super_admin_dashboard(username)
+            messagebox.showinfo("Success", f"Welcome {db_username}!")
 
-        elif role == "admin":
-            open_admin_dashboard(username)
+            if role == "super_admin":
+                open_super_admin_dashboard(db_username)
+            elif role == "admin":
+                open_admin_dashboard(db_username)
+            else:
+                open_user_dashboard(db_username)
 
         else:
-            open_user_dashboard(username)
-
+            messagebox.showerror("Error", "Invalid username or password")
     else:
-        messagebox.showerror(
-            "Error",
-            "Invalid username or password"
-        )
+        messagebox.showerror("Error", "Invalid username or password")
 
 
-# ================= SIGNUP PAGE =================
+# ================= SIGNUP WINDOW =================
 
 def open_signup():
     global signup_window
@@ -254,56 +88,24 @@ def open_signup():
     signup_window.geometry("350x350")
     signup_window.config(bg="#f0f0f0")
 
-    tk.Label(
-        signup_window,
-        text="Create Account",
-        font=("Arial", 18, "bold"),
-        bg="#f0f0f0"
-    ).pack(pady=15)
+    tk.Label(signup_window, text="Create Account",
+             font=("Arial", 18, "bold"), bg="#f0f0f0").pack(pady=15)
 
-    tk.Label(
-        signup_window,
-        text="Username",
-        bg="#f0f0f0"
-    ).pack()
-
+    tk.Label(signup_window, text="Username", bg="#f0f0f0").pack()
     signup_username = tk.Entry(signup_window, width=30)
     signup_username.pack(pady=5)
 
-    tk.Label(
-        signup_window,
-        text="Password",
-        bg="#f0f0f0"
-    ).pack()
-
-    signup_password = tk.Entry(
-        signup_window,
-        show="*",
-        width=30
-    )
+    tk.Label(signup_window, text="Password", bg="#f0f0f0").pack()
+    signup_password = tk.Entry(signup_window, show="*", width=30)
     signup_password.pack(pady=5)
 
-    tk.Label(
-        signup_window,
-        text="Confirm Password",
-        bg="#f0f0f0"
-    ).pack()
-
-    signup_confirm = tk.Entry(
-        signup_window,
-        show="*",
-        width=30
-    )
+    tk.Label(signup_window, text="Confirm Password", bg="#f0f0f0").pack()
+    signup_confirm = tk.Entry(signup_window, show="*", width=30)
     signup_confirm.pack(pady=5)
 
-    tk.Button(
-        signup_window,
-        text="Create Account",
-        bg="green",
-        fg="white",
-        width=20,
-        command=signup
-    ).pack(pady=15)
+    tk.Button(signup_window, text="Create Account",
+              bg="green", fg="white", width=20,
+              command=signup).pack(pady=15)
 
 
 # ================= USER DASHBOARD =================
@@ -321,10 +123,7 @@ def request_admin(username):
     conn.commit()
     conn.close()
 
-    messagebox.showinfo(
-        "Success",
-        "Admin request sent!"
-    )
+    messagebox.showinfo("Success", "Admin request sent!")
 
 
 def open_user_dashboard(username):
@@ -332,32 +131,18 @@ def open_user_dashboard(username):
     dashboard.title("User Dashboard")
     dashboard.geometry("350x250")
 
-    tk.Label(
-        dashboard,
-        text=f"Welcome {username}",
-        font=("Arial", 16)
-    ).pack(pady=20)
+    tk.Label(dashboard, text=f"Welcome {username}",
+             font=("Arial", 16)).pack(pady=20)
 
-    tk.Label(
-        dashboard,
-        text="Role: Regular User"
-    ).pack()
+    tk.Label(dashboard, text="Role: Regular User").pack()
 
-    tk.Button(
-        dashboard,
-        text="Request Admin Access",
-        bg="orange",
-        command=lambda:
-        request_admin(username)
-    ).pack(pady=10)
+    tk.Button(dashboard, text="Request Admin Access",
+              bg="orange",
+              command=lambda: request_admin(username)).pack(pady=10)
 
-    tk.Button(
-        dashboard,
-        text="Logout",
-        bg="red",
-        fg="white",
-        command=dashboard.destroy
-    ).pack(pady=10)
+    tk.Button(dashboard, text="Logout",
+              bg="red", fg="white",
+              command=dashboard.destroy).pack(pady=10)
 
 
 # ================= ADMIN DASHBOARD =================
@@ -367,24 +152,14 @@ def open_admin_dashboard(username):
     dashboard.title("Admin Dashboard")
     dashboard.geometry("350x250")
 
-    tk.Label(
-        dashboard,
-        text=f"Welcome Admin {username}",
-        font=("Arial", 16)
-    ).pack(pady=20)
+    tk.Label(dashboard, text=f"Welcome Admin {username}",
+             font=("Arial", 16)).pack(pady=20)
 
-    tk.Label(
-        dashboard,
-        text="Role: Admin"
-    ).pack()
+    tk.Label(dashboard, text="Role: Admin").pack()
 
-    tk.Button(
-        dashboard,
-        text="Logout",
-        bg="red",
-        fg="white",
-        command=dashboard.destroy
-    ).pack(pady=20)
+    tk.Button(dashboard, text="Logout",
+              bg="red", fg="white",
+              command=dashboard.destroy).pack(pady=20)
 
 
 # ================= SUPER ADMIN =================
@@ -403,21 +178,17 @@ def refresh_requests(tree):
     AND role = 'user'
     """)
 
-    users = cursor.fetchall()
-    conn.close()
-
-    for user in users:
+    for user in cursor.fetchall():
         tree.insert("", tk.END, values=user)
+
+    conn.close()
 
 
 def approve_admin(tree):
     selected = tree.focus()
 
     if not selected:
-        messagebox.showerror(
-            "Error",
-            "Select a user"
-        )
+        messagebox.showerror("Error", "Select a user")
         return
 
     username = tree.item(selected)["values"][0]
@@ -427,19 +198,14 @@ def approve_admin(tree):
 
     cursor.execute("""
     UPDATE users
-    SET role='admin',
-        admin_request=0
+    SET role='admin', admin_request=0
     WHERE username=?
     """, (username,))
 
     conn.commit()
     conn.close()
 
-    messagebox.showinfo(
-        "Success",
-        f"{username} promoted to Admin"
-    )
-
+    messagebox.showinfo("Success", f"{username} promoted to Admin")
     refresh_requests(tree)
 
 
@@ -448,59 +214,27 @@ def open_super_admin_dashboard(username):
     dashboard.title("Super Admin Dashboard")
     dashboard.geometry("500x400")
 
-    tk.Label(
-        dashboard,
-        text=f"Welcome {username}",
-        font=("Arial", 18, "bold")
-    ).pack(pady=10)
+    tk.Label(dashboard, text=f"Welcome {username}",
+             font=("Arial", 18, "bold")).pack(pady=10)
 
-    tk.Label(
-        dashboard,
-        text="Pending Admin Requests"
-    ).pack()
+    tk.Label(dashboard, text="Pending Admin Requests").pack()
 
-    tree = ttk.Treeview(
-        dashboard,
-        columns=("Username",),
-        show="headings"
-    )
-
-    tree.heading(
-        "Username",
-        text="Username"
-    )
-
-    tree.pack(
-        pady=10,
-        fill="both",
-        expand=True
-    )
+    tree = ttk.Treeview(dashboard, columns=("Username",), show="headings")
+    tree.heading("Username", text="Username")
+    tree.pack(pady=10, fill="both", expand=True)
 
     refresh_requests(tree)
 
-    tk.Button(
-        dashboard,
-        text="Approve as Admin",
-        bg="green",
-        fg="white",
-        command=lambda:
-        approve_admin(tree)
-    ).pack(pady=5)
+    tk.Button(dashboard, text="Approve as Admin",
+              bg="green", fg="white",
+              command=lambda: approve_admin(tree)).pack(pady=5)
 
-    tk.Button(
-        dashboard,
-        text="Refresh",
-        command=lambda:
-        refresh_requests(tree)
-    ).pack(pady=5)
+    tk.Button(dashboard, text="Refresh",
+              command=lambda: refresh_requests(tree)).pack(pady=5)
 
-    tk.Button(
-        dashboard,
-        text="Logout",
-        bg="red",
-        fg="white",
-        command=dashboard.destroy
-    ).pack(pady=10)
+    tk.Button(dashboard, text="Logout",
+              bg="red", fg="white",
+              command=dashboard.destroy).pack(pady=10)
 
 
 # ================= MAIN WINDOW =================
@@ -512,52 +246,25 @@ root.title("User Management System")
 root.geometry("400x350")
 root.config(bg="#dfe6e9")
 
-tk.Label(
-    root,
-    text="Home Page",
-    font=("Arial", 22, "bold"),
-    bg="#dfe6e9"
-).pack(pady=20)
+tk.Label(root, text="Home Page",
+         font=("Arial", 22, "bold"),
+         bg="#dfe6e9").pack(pady=20)
 
-tk.Label(
-    root,
-    text="Username",
-    bg="#dfe6e9"
-).pack()
-
+tk.Label(root, text="Username", bg="#dfe6e9").pack()
 username_entry = tk.Entry(root, width=30)
 username_entry.pack(pady=5)
 
-tk.Label(
-    root,
-    text="Password",
-    bg="#dfe6e9"
-).pack()
-
-password_entry = tk.Entry(
-    root,
-    show="*",
-    width=30
-)
+tk.Label(root, text="Password", bg="#dfe6e9").pack()
+password_entry = tk.Entry(root, show="*", width=30)
 password_entry.pack(pady=5)
 
-tk.Button(
-    root,
-    text="Login",
-    width=20,
-    bg="blue",
-    fg="white",
-    command=login
-).pack(pady=10)
+tk.Button(root, text="Login",
+          width=20, bg="blue", fg="white",
+          command=login).pack(pady=10)
 
-tk.Button(
-    root,
-    text="Sign Up",
-    width=20,
-    bg="green",
-    fg="white",
-    command=open_signup
-).pack()
+tk.Button(root, text="Sign Up",
+          width=20, bg="green", fg="white",
+          command=open_signup).pack()
 
 root.bind("<Return>", lambda event: login())
 
