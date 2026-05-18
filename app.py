@@ -239,8 +239,6 @@ def open_super_admin_dashboard(username):
 
 # ================= MAIN WINDOW =================
 
-create_database()
-
 root = tk.Tk()
 root.title("User Management System")
 root.geometry("400x350")
