@@ -1,163 +1,6 @@
-'''import tkinter as tk
-from tkinter import messagebox
-import sqlite3
-
-# Create database and table
-def create_database():
-    conn = sqlite3.connect("users.db")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE,
-        password TEXT
-    )
-    """)
-    
-    # Insert default user
-    cursor.execute("""
-    INSERT OR IGNORE INTO users (username, password)
-    VALUES (?, ?)
-    """, ("admin", "1234"))
-
-    conn.commit()
-    conn.close()
-
-# signup function (not implemented in the UI, but can be used for testing)
-def signup(username, password):
-    conn = sqlite3.connect("users.db")
-    cursor = conn.cursor()
-
-    try:
-        cursor.execute("""
-        INSERT INTO users (username, password)
-        VALUES (?, ?)
-        """, (username, password))
-        conn.commit()
-        messagebox.showinfo("Success", "User registered successfully!")
-    except sqlite3.IntegrityError:
-        messagebox.showerror("Error", "Username already exists.")
-    finally:
-        conn.close()
-        
-# Login function
-def login():
-    username = username_entry.get()
-    password = password_entry.get()
-
-    conn = sqlite3.connect("users.db")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    SELECT * FROM users
-    WHERE username = ? AND password = ?
-    """, (username, password))
-
-    user = cursor.fetchone()
-
-    conn.close()
-
-    if user:
-        messagebox.showinfo("Success", f"Welcome {username}!")
-        open_dashboard(username)
-    else:
-        messagebox.showerror("Error", "Invalid Username or Password")
-
-
-# Dashboard window
-def open_dashboard(username):
-    dashboard = tk.Toplevel(root)
-    dashboard.title("Dashboard")
-    dashboard.geometry("300x200")
-
-    label = tk.Label(
-        dashboard,
-        text=f"Welcome {username}",
-        font=("Arial", 16)
-    )
-    label.pack(pady=20)
-
-    logout_btn = tk.Button(
-        dashboard,
-        text="Logout",
-        command=dashboard.destroy
-    )
-    logout_btn.pack()
-
-
-# Create database
-create_database()
-
-
-# Main window
-root = tk.Tk()
-root.title("Login Portal")
-root.geometry("350x250")
-
-
-title = tk.Label(root, text="Login Portal", font=("Arial", 18))
-title.pack(pady=10)
-
-
-# Username
-username_label = tk.Label(root, text="Username")
-username_label.pack()
-
-username_entry = tk.Entry(root)
-username_entry.pack()
-
-
-# Password
-password_label = tk.Label(root, text="Password")
-password_label.pack()
-
-password_entry = tk.Entry(root, show="*")
-password_entry.pack()
-
-
-# Login Button
-login_button = tk.Button(
-    root,
-    text="Login",
-    command=login
-)
-login_button.pack(pady=15)
-
-
-root.mainloop()
-'''
 import tkinter as tk
 from tkinter import messagebox, ttk
 import sqlite3
-
-###database setup
-
-def create_database():
-    conn = sqlite3.connect("users.db")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE,
-        password TEXT,
-        role TEXT DEFAULT 'user',
-        admin_request INTEGER DEFAULT 0
-    )
-    """)
-
-    # Create default super admin
-    cursor.execute("""
-    INSERT OR IGNORE INTO users
-    (username, password, role, admin_request)
-    VALUES (?, ?, ?, ?)
-    """, ("superadmin", "admin123", "super_admin", 0))
-
-    conn.commit()
-    conn.close()
-
-
 # ================= SIGNUP =================
 
 def signup():
@@ -300,7 +143,7 @@ def open_signup():
         signup_window,
         text="Create Account",
         bg="green",
-        fg="white",
+        fg="black",
         width=20,
         command=signup
     ).pack(pady=15)
@@ -482,7 +325,7 @@ def open_super_admin_dashboard(username):
         dashboard,
         text="Approve as Admin",
         bg="green",
-        fg="white",
+        fg="black",
         command=lambda:
         approve_admin(tree)
     ).pack(pady=5)
@@ -498,14 +341,12 @@ def open_super_admin_dashboard(username):
         dashboard,
         text="Logout",
         bg="red",
-        fg="white",
+        fg="black",
         command=dashboard.destroy
     ).pack(pady=10)
 
 
 # ================= MAIN WINDOW =================
-
-create_database()
 
 root = tk.Tk()
 root.title("User Management System")
@@ -546,7 +387,7 @@ tk.Button(
     text="Login",
     width=20,
     bg="blue",
-    fg="white",
+    fg="black",
     command=login
 ).pack(pady=10)
 
@@ -555,7 +396,7 @@ tk.Button(
     text="Sign Up",
     width=20,
     bg="green",
-    fg="white",
+    fg="black",
     command=open_signup
 ).pack()
 
